@@ -1,0 +1,8 @@
+flask
+flask-socketio
+psycopg2-binary
+psutil
+requests
+python-socketio
+eventlet
+prometheus-flask-exporter
