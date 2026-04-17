@@ -65,13 +65,24 @@ services:
 
   # 5. Visualization
   grafana:
-    image: grafana/grafana
-    container_name: grafana
+   image: grafana/grafana
+   container_name: grafana
+   restart: always
+   ports:
+     - "3000:3000"
+   volumes:
+     - grafana_data:/var/lib/grafana
+   networks:
+    - monitoring-network
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
     restart: always
     ports:
-      - "3000:3000"
+      - "9090:9090"
     volumes:
-      - grafana_data:/var/lib/grafana
+      # Change this to map the folder, not the file
+      - ./prometheus:/etc/prometheus
     networks:
       - monitoring-network
 
@@ -84,6 +95,18 @@ services:
       - "9100:9100"
     networks:
       - monitoring-network
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    volumes:
+      - ./alertmanager:/etc/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    ports:
+      - "9093:9093"
+    networks:
+      - monitoring-network # Use the same network as your Prometheus/App
 
 volumes:
   postgres_data:

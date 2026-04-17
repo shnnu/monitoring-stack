@@ -1,0 +1,20 @@
+groups:
+- name: swaraj_alerts
+  rules:
+  - alert: HighCpuUsage
+    expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100) > 20
+    for: 10s
+    labels:
+      severity: critical
+    annotations:
+      summary: "CPU Alert Test for Client"
+      description: "CPU usage is at {{ $value }}%."
+
+  - alert: HighErrorRate
+    expr: rate(flask_http_request_total{status="500"}[1m]) > 5
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Emergency: High 500 Errors!"
+      description: "The Python app is reporting more than 5 errors per second."

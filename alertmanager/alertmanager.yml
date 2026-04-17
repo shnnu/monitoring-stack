@@ -1,0 +1,20 @@
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'ammanpatnaikuriti@gmail.com'
+  smtp_auth_username: 'ammanpatnaikuriti@gmail.com'
+  smtp_auth_password: 'bnyshwqybzxubyin'
+  smtp_require_tls: true
+
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 1h
+  receiver: 'client-inbox'
+
+receivers:
+- name: 'client-inbox'
+  email_configs:
+  - to: 'nilapandey10@gmail.com'
+    send_resolved: true
