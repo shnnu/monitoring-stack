@@ -35,7 +35,7 @@ services:
     networks:
       - monitoring-network
 
-  # 3. Reverse Proxy (FIXED PATH)
+  # 3. Reverse Proxy
   nginx:
     image: nginx:latest
     container_name: nginx
@@ -43,14 +43,13 @@ services:
     ports:
       - "8080:80"
     volumes:
-      # This points to your actual file in the nginx folder
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - python-app
     networks:
       - monitoring-network
 
-  # 4. Metrics Collector
+  # 4. Metrics Collector (MERGED & CORRECTED)
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -58,31 +57,19 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      # Ensure prometheus.yml is actually in your main folder
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus:/etc/prometheus
     networks:
       - monitoring-network
 
   # 5. Visualization
   grafana:
-   image: grafana/grafana
-   container_name: grafana
-   restart: always
-   ports:
-     - "3000:3000"
-   volumes:
-     - grafana_data:/var/lib/grafana
-   networks:
-    - monitoring-network
-  prometheus:
-    image: prom/prometheus
-    container_name: prometheus
+    image: grafana/grafana
+    container_name: grafana
     restart: always
     ports:
-      - "9090:9090"
+      - "3000:3000"
     volumes:
-      # Change this to map the folder, not the file
-      - ./prometheus:/etc/prometheus
+      - grafana_data:/var/lib/grafana
     networks:
       - monitoring-network
 
@@ -96,9 +83,11 @@ services:
     networks:
       - monitoring-network
 
+  # 7. Alerting
   alertmanager:
     image: prom/alertmanager:latest
     container_name: alertmanager
+    restart: always
     volumes:
       - ./alertmanager:/etc/alertmanager
     command:
@@ -106,7 +95,7 @@ services:
     ports:
       - "9093:9093"
     networks:
-      - monitoring-network # Use the same network as your Prometheus/App
+      - monitoring-network
 
 volumes:
   postgres_data:
