@@ -11,57 +11,66 @@ import random
 # --- 1. App Configuration ---
 app = Flask(__name__)
 
-# Prometheus Exporter: Automatically creates the /metrics endpoint
+# Prometheus Exporter
 metrics = PrometheusMetrics(app)
 metrics.info('app_info', 'Stress Control Dashboard', version='2.0.0')
 
-# SocketIO: Enables the real-time "Live Wire" for metrics
+# SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 stress_test_active = False
 
 # --- 2. Modern Dark-Theme HTML Template ---
+# WE WRAP THE HTML IN TRIPLE QUOTES TO FIX THE SYNTAX ERROR
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DevOps Stress Control</title>
+
+    <link rel="icon" type="image/png" href="/static/logo.png">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
         body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; }
         .navbar { background-color: #1e293b; border-bottom: 1px solid #334155; }
+        .navbar-brand img { height: 35px; margin-right: 12px; vertical-align: middle; border-radius: 4px; }
         .card { background-color: #1e293b; border: 1px solid #334155; color: white; border-radius: 12px; }
         .metric-label { color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
         .metric-value { font-size: 2.8rem; font-weight: 700; color: #38bdf8; }
-        #log-container { background: #020617; height: 180px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; border-radius: 8px; }
+        #log-container { background: #020617; height: 220px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; border-radius: 8px; display: flex; flex-direction: column-reverse; }
         .log-entry { border-left: 3px solid #38bdf8; padding-left: 10px; margin-bottom: 4px; color: #cbd5e1; }
         .status-badge { font-size: 0.75rem; padding: 5px 12px; border-radius: 20px; }
     </style>
 </head>
 <body>
-    <nav class="navbar mb-4">
+    <nav class="navbar mb-4 shadow-sm">
         <div class="container">
-            <span class="navbar-brand text-white fw-bold">🚀 STRESS<span class="text-info">CONTROL</span></span>
+            <a class="navbar-brand text-white fw-bold" href="#">
+                <img src="/static/logo.png" alt="Logo">
+                🚀 STRESS<span class="text-info">CONTROL</span>
+            </a>
             <span id="status" class="badge bg-danger status-badge">OFFLINE</span>
         </div>
     </nav>
 
     <div class="container">
-        <div class="card p-4 mb-4 shadow-lg">
+        <div class="card p-4 mb-4 shadow-lg border-0">
             <div class="row g-3 align-items-end">
                 <div class="col-md-5">
                     <label class="metric-label mb-1">Target Endpoint</label>
-                    <input type="text" id="targetUrl" class="form-control bg-dark text-white border-secondary" value="/api/test">
+                    <input type="text" id="targetUrl" class="form-control bg-dark text-white border-secondary" value="http://localhost:5000/api/test">
                 </div>
                 <div class="col-md-2">
                     <label class="metric-label mb-1">Threads</label>
                     <input type="number" id="concurrent" class="form-control bg-dark text-white border-secondary" value="10">
                 </div>
                 <div class="col-md-5 d-flex gap-2">
-                    <button onclick="startTest()" class="btn btn-primary w-100 fw-bold">START SEQUENCE</button>
-                    <button onclick="stopTest()" class="btn btn-danger w-100 fw-bold">ABORT</button>
+                    <button onclick="startTest()" class="btn btn-primary w-100 fw-bold shadow-sm">START SEQUENCE</button>
+                    <button onclick="stopTest()" class="btn btn-outline-danger w-100 fw-bold">ABORT</button>
                 </div>
             </div>
         </div>
@@ -82,7 +91,7 @@ HTML_TEMPLATE = """
         const socket = io();
         const statusEl = document.getElementById('status');
 
-        socket.on('connect', () => { 
+        socket.on('connect', () => {
             statusEl.className = 'badge bg-success status-badge';
             statusEl.innerText = 'ONLINE';
             addLog("System: WebSocket Stream Connected.");
@@ -98,7 +107,11 @@ HTML_TEMPLATE = """
 
         function addLog(msg) {
             const log = document.getElementById('log-container');
-            log.innerHTML = `<div class="log-entry"><span class="text-secondary">[${new Date().toLocaleTimeString()}]</span> ${msg}</div>` + log.innerHTML;
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="text-secondary">[${new Date().toLocaleTimeString()}]</span> \${msg}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
         }
 
         function startTest() {
@@ -111,10 +124,13 @@ HTML_TEMPLATE = """
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(config)
-            });
+            }).then(() => addLog("Command: Initializing stress test sequence..."));
         }
 
-        function stopTest() { fetch('/api/stop-test', {method: 'POST'}); }
+        function stopTest() {
+            fetch('/api/stop-test', {method: 'POST'})
+            .then(() => addLog("Command: Sending abort signal to worker threads..."));
+        }
     </script>
 </body>
 </html>
@@ -127,9 +143,8 @@ def index():
 
 @app.route('/api/test')
 def test_endpoint():
-    """Endpoint used for testing; simulates random processing time and errors."""
     time.sleep(random.uniform(0.01, 0.05))
-    if random.random() < 0.07:  # 7% failure rate simulation
+    if random.random() < 0.07:
         return jsonify({'error': 'internal_server_error'}), 500
     return jsonify({'status': 'ok', 'timestamp': time.time()})
 
@@ -150,10 +165,9 @@ def stop_test():
 def run_stress_test(config):
     global stress_test_active
     target = config.get('url')
-    # Use internal DNS if relative path is provided
     url = f"http://localhost:5000{target}" if target.startswith('/') else target
     concurrent = config.get('concurrent', 10)
-    
+
     pool = eventlet.GreenPool(concurrent)
     total_reqs = 0
     failed_reqs = 0
@@ -171,17 +185,14 @@ def run_stress_test(config):
             except Exception:
                 failed_reqs += 1
 
-        # Spawn concurrent requests using green threads
         for _ in range(concurrent):
             pool.spawn_n(fetch_url)
-        
-        # Calculate real-time metrics
+
         error_rate = round((failed_reqs/total_reqs)*100, 2) if total_reqs > 0 else 0
-        
-        # Broadcast to frontend
+
         socketio.emit('metrics', {
-            'rps': concurrent, 
-            'avg_time': random.randint(32, 48), 
+            'rps': concurrent,
+            'avg_time': random.randint(32, 48),
             'error_rate': error_rate
         })
         eventlet.sleep(1)
@@ -189,5 +200,4 @@ def run_stress_test(config):
     socketio.emit('message', {'message': "Stress sequence terminated by user."})
 
 if __name__ == '__main__':
-    # Run using eventlet for high-concurrency support
     socketio.run(app, host='0.0.0.0', port=5000)

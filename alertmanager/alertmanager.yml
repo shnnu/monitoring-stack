@@ -10,11 +10,32 @@ route:
   group_by: ['alertname']
   group_wait: 10s
   group_interval: 1m
-  repeat_interval: 1h
+  repeat_interval: 2m
   receiver: 'client-inbox'
 
 receivers:
 - name: 'client-inbox'
   email_configs:
-  - to: 'nilapandey10@gmail.com'
+  - to: 'ammanpatnaikuriti@gmail.com'
     send_resolved: true
+    headers:
+      subject: '{{ if eq .Status "firing" }}😵 URGENT: {{ .CommonLabels.alertname }}{{ else }}😎 FIXED: {{ .CommonLabels.alertname }}{{ end }}'
+    html: |
+      <div style="font-family: 'Helvetica', sans-serif; max-width: 600px; border: 2px solid {{ if eq .Status "firing" }}#ff0000{{ else }}#00cc00{{ end }}; border-radius: 12px;">
+        <div style="background-color: {{ if eq .Status "firing" }}#8b0000{{ else }}#228b22{{ end }}; color: white; padding: 25px; text-align: center;">
+          <h1 style="margin: 0; font-size: 50px;">
+            {{ if eq .Status "firing" }}😵{{ else }}😎{{ end }}
+          </h1>
+          <h2 style="margin: 10px 0 0 0; letter-spacing: 2px;">
+            {{ if eq .Status "firing" }}SYSTEM CRITICAL{{ else }}SYSTEM STABLE{{ end }}
+          </h2>
+        </div>
+        <div style="padding: 20px; background-color: #fff;">
+          <h3 style="color: #333;">Alert Details:</h3>
+          <p><strong>Status:</strong> {{ .Status | toUpper }}</p>
+          <p><strong>Issue:</strong> {{ .CommonLabels.alertname }}</p>
+          <div style="padding: 15px; background: #ffeeee; border-left: 5px solid #ff0000; margin: 10px 0;">
+            <strong>Tech Log:</strong> {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+          </div>
+        </div>
+      </div>
