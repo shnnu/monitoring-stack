@@ -88,6 +88,3 @@ Plaintext
 └── app/
     └── [Python App Files]
 
-Gmail App Password (for Alerting).
-
-Installation
